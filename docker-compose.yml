@@ -1,0 +1,58 @@
+version: '3.9'
+
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    container_name: go-app
+    volumes:
+      - ./server:/app
+      - /app/bin
+      - /app/pkg
+    command: air
+    ports:
+      - "8080:8080"
+    environment:
+      GO_ENV: development
+      DB_HOST: postgres
+      DB_USER: lynx
+      DB_PASS: lynxpass
+      DB_NAME: lynxdb
+      REDIS_HOST: redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  postgres:
+    image: postgres:18
+    container_name: postgres-db
+    restart: always
+    environment:
+      POSTGRES_DB: lynxdb
+      POSTGRES_USER: lynx
+      POSTGRES_PASSWORD: lynxpass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lynx -d lynxdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8
+    container_name: redis-cache
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+volumes:
+  postgres-data:
+  redis-data:
